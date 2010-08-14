@@ -30,6 +30,10 @@ our $VERSION = '0.01';
 # we want VCI to be loaded into Apache during mod_perl.pl.
 use if $ENV{MOD_PERL}, 'VCI';
 
+############
+# Database #
+############
+
 sub db_schema_abstract_schema {
     my ($class, $args) = @_;
     my $schema = $args->{schema};
@@ -43,8 +47,19 @@ sub db_schema_abstract_schema {
         commit_id => {TYPE => 'INT3', NOTNULL => 1},
         project   => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
         repo      => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
-        repo_type => {TYPE => 'varchar(16)', NOTNULL => 1},
+        type      => {TYPE => 'varchar(16)', NOTNULL => 1},
     };
+}
+
+##########
+# Config #
+##########
+
+
+sub config_add_panels {
+    my ($self, $args) = @_;
+    my $modules = $args->{'panel_modules'};
+    $modules->{'VCS'} = 'Bugzilla::Extension::VCS::Params';
 }
 
 __PACKAGE__->NAME;

@@ -1,0 +1,61 @@
+[%# The contents of this file are subject to the Mozilla Public
+  # License Version 1.1 (the "License"); you may not use this file
+  # except in compliance with the License. You may obtain a copy of
+  # the License at http://www.mozilla.org/MPL/
+  #
+  # Software distributed under the License is distributed on an "AS
+  # IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+  # implied. See the License for the specific language governing
+  # rights and limitations under the License.
+  #
+  # The Original Code is the Bugzilla Bug Tracking System.
+  #
+  # The Initial Developer of the Original Code is Everything Solved, Inc.
+  # Portions created by the Initial Developer are Copyright (C) 2010
+  # the Initial Developer. All Rights Reserved.
+  #
+  # Contributor(s): 
+  #   Max Kanat-Alexander <mkanat@bugzilla.org>
+  #%]
+
+[% IF error == "vcs_commit_id_error" %]
+  An error occurred while attempting to fetch commit [% id FILTER html %]
+  from the "[% project FILTER html %]" project in the
+  "[% repo FILTER html %]" repository. Sometimes this means that
+  you specified an invalid repository or project.
+  The error was: [% err FILTER html %]
+  
+[% ELSIF error == "vcs_type_bad_chars" %]
+  '[% type FILTER html %]' is not a valid VCS type. The name must contain
+  only numbers, letters, and underscores.
+
+[% ELSIF error == "vcs_no_such_commit" %]
+  There is no commit with the id "[% id FILTER html %]" for the
+  "[% project FILTER html %]" in the "[% repo FILTER html %]"
+  repository.
+  
+[% ELSIF error == "vcs_repo_denied" %]
+  You may not link link [% terms.bugs %] to the VCS repository
+  "[% repo FILTER html %]". Valid repositories are:
+  
+  <ul>
+    [% FOREACH item = allowed %]
+      <li>[% item FILTER html %]</li>
+    [% END %]
+  </ul>
+  
+  [% IF user.in_group('editparams') %]
+    <p>You can specify additional allowed
+    repositories by setting the
+    <a href="editparams.cgi?section=VCS#vcs_repos">vcs_repos</a> parameter.</p>
+  [% END %]
+  
+[% ELSIF error == "vcs_repo_invalid" %]
+  '[% repo FILTER html %]' is not a valid [% type FILTER html %] repository:
+  [% err FILTER html %]
+  
+[% ELSIF error == "vcs_type_invalid" %]
+  '[% type FILTER html %]' is not a valid VCS type that this
+  [%+ terms.Bugzilla %] currently supports. Error: [% err FILTER html %]
+
+[% END %]
