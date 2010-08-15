@@ -27,6 +27,18 @@ use Bugzilla::Bug;
 
 use VCI;
 
+use constant DB_COLUMNS => qw(
+    author
+    bug_id
+    commit_id
+    commit_time
+    id
+    project
+    repo
+    revno
+    type
+);
+
 use constant LIST_ORDER => 'id';
 use constant VALIDATOR_DEPENDENCIES => {
     commit_id => ['project'],
@@ -38,9 +50,12 @@ use constant VALIDATOR_DEPENDENCIES => {
 # Simple Accessors #
 ####################
 
-sub commit_id { return $_[0]->{commit_id} }
-sub project   { return $_[0]->{project}   }
-sub repo      { return $_[0]->{repo}      }
+sub author    { return $_[0]->{author}      }
+sub commit_id { return $_[0]->{commit_id}   }
+sub project   { return $_[0]->{project}     }
+sub repo      { return $_[0]->{repo}        }
+sub revno     { return $_[0]->{revno}       }
+sub time      { return $_[0]->{commit_time} }
 
 sub bug {
     my ($self) = @_;
@@ -48,9 +63,30 @@ sub bug {
     return $self->{bug};
 }
 
+#########################
+# Database Manipulation #
+#########################
+
+sub run_create_validators {
+    my $self = shift;
+    my $params = $self->SUPER::run_create_validators(@_);
+    my $commit = delete $params->{commit_id};
+    $params->{commit_id} = $commit->revision;
+    $params->{revno} = $commit->revno;
+    $params->{commit_time} =
+        $commit->time->clone->set_time_zone(Bugzilla->local_timezone);
+    $params->{author} = $commit->author;
+    return $params;
+}
+
 ##############
 # Validators #
 ##############
+
+sub _check_bug_id {
+    my ($self, $value) = @_;
+    return Bugzilla::Bug->check($value)->id;
+}
 
 sub _check_commit_id {
     my ($invocant, $value, undef, $params) = @_;

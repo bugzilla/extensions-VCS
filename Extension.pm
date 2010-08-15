@@ -38,16 +38,19 @@ sub db_schema_abstract_schema {
     my ($class, $args) = @_;
     my $schema = $args->{schema};
     $schema->{vcs_commit} = {
-        id        => {TYPE => 'MEDIUMSERIAL', NOTNULL => 1,
-                      PRIMARYKEY => 1},
-        bug_id    => {TYPE => 'INT3', NOTNULL => 1,
-                      REFERENCES => {TABLE  => 'bugs',
-                                     COLUMN => 'bug_id',
-                                     DELETE => 'CASCADE'}},
-        commit_id => {TYPE => 'INT3', NOTNULL => 1},
-        project   => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
-        repo      => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
-        type      => {TYPE => 'varchar(16)', NOTNULL => 1},
+        id          => {TYPE => 'MEDIUMSERIAL', NOTNULL => 1,
+                        PRIMARYKEY => 1},
+        bug_id      => {TYPE => 'INT3', NOTNULL => 1,
+                        REFERENCES => {TABLE  => 'bugs',
+                                       COLUMN => 'bug_id',
+                                       DELETE => 'CASCADE'}},
+        commit_id   => {TYPE => 'varchar(255)', NOTNULL => 1},
+        revno       => {TYPE => 'INT3', NOTNULL => 1},
+        commit_time => {TYPE => 'DATETIME', NOTNULL => 1},
+        author      => {TYPE => 'MEDIUMTEXT', NOTNULL => 1},
+        project     => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
+        repo        => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
+        type        => {TYPE => 'varchar(16)', NOTNULL => 1},
     };
 }
 
