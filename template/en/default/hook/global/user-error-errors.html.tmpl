@@ -39,7 +39,7 @@
   "[% repo FILTER html %]". Valid repositories are:
   
   <ul>
-    [% FOREACH item = allowed %]
+    [% FOREACH item = allowed.keys %]
       <li>[% item FILTER html %]</li>
     [% END %]
   </ul>

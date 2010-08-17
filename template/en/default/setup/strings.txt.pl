@@ -27,7 +27,7 @@ Now that you have installed the VCS extension, you will have to edit
 its configuration on the "VCS" section of the "Parameters" Administration
 panel:
 
-  ##urlbase##editparams.cgi?section=VCS
+  ##urlbase##editparams.cgi?section=vcs
 END
     vcs_web_invalid =>
         "'##field##' is an invalid field to use in a URL for vcs_web",

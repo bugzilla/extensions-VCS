@@ -23,11 +23,14 @@ package Bugzilla::Extension::VCS::WebService;
 use strict;
 use warnings;
 use base qw(Bugzilla::WebService);
+use Bugzilla::Constants;
 use Bugzilla::Error;
 use Bugzilla::Extension::VCS::Commit;
 
 sub add_commit {
     my ($self, $params) = @_;
+    
+    Bugzilla->login(LOGIN_REQUIRED);
     
     # Don't let people set the "id" field.
     delete $params->{id};

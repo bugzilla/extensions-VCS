@@ -26,9 +26,11 @@ use base qw(Bugzilla::Object);
 use Bugzilla::Bug;
 use Bugzilla::Constants;
 use Bugzilla::Error;
-use Bugzilla::Util qw(trim);
+use Bugzilla::Util qw(trick_taint trim);
 
 use VCI;
+
+use constant DB_TABLE => 'vcs_commit';
 
 use constant DB_COLUMNS => qw(
     author
@@ -51,13 +53,11 @@ use constant VALIDATORS => {
     creator   => \&_check_creator,
     project   => \&_check_project,
     repo      => \&_check_repo,
-    type      => \&_check_type,
 };
 
 use constant VALIDATOR_DEPENDENCIES => {
     commit_id => ['project'],
     project   => ['repo'],
-    repo      => ['type'],
 };
 
 ####################
@@ -83,13 +83,21 @@ sub bug {
 
 sub run_create_validators {
     my $self = shift;
-    my $params = $self->SUPER::run_create_validators(@_);
+    my ($params) = @_;
+    # Callers can't set type--it's always set by _check_repo.
+    delete $params->{type};
+    $params = $self->SUPER::run_create_validators(@_);
     my $commit = delete $params->{commit_id};
     $params->{commit_id} = $commit->revision;
     $params->{revno} = $commit->revno;
     $params->{commit_time} =
         $commit->time->clone->set_time_zone(Bugzilla->local_timezone);
     $params->{author} = $commit->author;
+    # These are all tainted from the VCS, but are safe to insert
+    # into the DB.
+    foreach my $key (qw(commit_id revno commit_time author)) {
+        trick_taint($params->{$key});
+    }
     return $params;
 }
 
@@ -99,7 +107,7 @@ sub run_create_validators {
 
 sub _check_bug_id {
     my ($self, $value) = @_;
-    my $bug = Bugzilla::Bug->check($value)->id;
+    my $bug = Bugzilla::Bug->check($value);
     Bugzilla->user->can_edit_product($bug->product_id)
         || ThrowUserError("product_edit_denied", { product => $bug->product });
     my $privs;
@@ -119,9 +127,10 @@ sub _check_commit_id {
                          param => 'commit_id' });
     }
     
+    local $ENV{PATH} = Bugzilla->params->{'vcs_path'};
     my $repo = VCI->connect(repo => $params->{repo}, type => $params->{type});
-    my $project = $repo->get_project($params->{project});
-    my $commit = eval { $project->get_commit($value) };
+    my $project = $repo->get_project(name => $params->{project});
+    my $commit = eval { $project->get_commit(revision => $value) };
     if (!$commit) {
         if (my $error = $@) {
             ThrowUserError('vcs_commit_id_error',
@@ -141,7 +150,7 @@ sub _check_commit_id {
 sub _check_creator {
     my ($self, $args) = @_;
     Bugzilla->login(LOGIN_REQUIRED);
-    return Bugzilla->user
+    return Bugzilla->user->id;
 }
 
 sub _check_project {
@@ -164,45 +173,15 @@ sub _check_repo {
         ThrowCodeError('param_required',
                        { function => "$invocant->create", param => 'repo' });
     }
-    
-    my $type = $params->{type};
-    my $object = eval { VCI->connect(repo => $value, type => $type) };
-    if (!$object) {
-        ThrowUserError('vcs_repo_invalid', { repo => $value, err => $@,
-                                             type => $type });
-    }
-    
-    # VCI normalizes the URI, so we want to use the normalized URI.
-    $value = $object->root;
-    
-    # Repo may be tainted, and VCI dies with tainted repos, because they
-    # can be used in dangerous ways. So we restrict repos to ones
-    # listed in vcs_repos.
-    my @allowed_repos = split("\n", Bugzilla->params->{'vcs_repos'});
-    if (!grep { lc($_) eq lc($value) } @allowed_repos) {
+
+    my $allowed_repos = Bugzilla::Extension::VCS->_vcs_repos;
+    if (!$allowed_repos->{$value}) {
         ThrowUserError('vcs_repo_denied',
-                       { repo => $value, allowed => \@allowed_repos });
+                       { repo => $value, allowed => $allowed_repos });
     }
     
-    return $value;
-}
-
-sub _check_type {
-    my ($invocant, $value) = @_;
-    $value = trim($value);
-
-    if ($value eq '' or !defined $value) {
-        ThrowCodeError('param_required',
-                       { function => "$invocant->create", param => 'type' });
-    }
+    $params->{type} = $allowed_repos->{$value};
     
-    $value =~ /^\w+$/i
-        or ThrowUserError('vcs_type_bad_chars', { type => $value });
-        
-    if (!eval { require "VCI/VCS/$value.pm" }) {
-        my $error = $@;
-        ThrowUserError('vcs_type_invalid', { type => $value, err => $error });
-    }
     return $value;
 }
 

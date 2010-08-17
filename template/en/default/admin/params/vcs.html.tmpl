@@ -23,14 +23,24 @@
 %]
 
 [% vcs_repos = BLOCK %]
-  A list of VCS repositories that users may link bugs to. One repository
-  per line. A repository is the root location of the VCS that
+  A list of VCS repositories that users may link bugs to. Each line starts
+  with the type of VCS that the repository is, then a space, then the URL
+  or path to the repository. A "repository" is the root location of the VCS that
   you are using. For example, if you have a project at
   <strong>svn://svn.example.com/svn/my_project/branches/3.0</strong>,
   then your repository would be <strong>svn://svn.example.com/svn/</strong>.
   
-  <p>For more information on allowed repository types for your VCS, read the
-  documentation for <a href="http://search.cpan.org/dist/VCI/">the relevant
+  <p>In that specific case, the full line you'd specify in this parameter
+    would be:</p>
+  
+  <p>Svn svn://svn.example.com/svn/</p>
+  
+  <p>The valid VCS types are <strong>Svn</strong> (Subversion),
+    <strong>CVS</strong>, <strong>Bzr</strong> (Bazaar), <strong>Hg</strong>
+    (Mercurial), and <strong>Git</strong>.</p>
+  
+  <p>For more information on the format of repository URLs for each VCS, read
+  the documentation for <a href="http://search.cpan.org/dist/VCI/">the relevant
   "VCI::VCS::" module</a> for your system.</p>
 [% END %]
 
@@ -56,6 +66,16 @@
       <dd>The globally-unique id of the revision for this particular commit.
         In some VCSes this is a long string, different from %revno%.</dd>
   </dl>
+[% END %]
+
+[% vcs_path = BLOCK %]
+  In order to operate properly, the VCS extension needs to know where the
+  client binaries are for each VCS you plan to integrate with. We don't need
+  this for Subversion, but we do need it for all the other VCSes.
+  
+  <p>This parameter is in the same format as the PATH environment variable
+    on your system. The webserver needs to be able to access all the paths
+    specified in this list.</p>
 [% END %]
 
 [% param_descs = {

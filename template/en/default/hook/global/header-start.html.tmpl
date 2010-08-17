@@ -18,19 +18,4 @@
   #   Max Kanat-Alexander <mkanat@everythingsolved.com>
   #%]
 
-<ul class="vcs_commits_list">
-  [% FOREACH commit = bug.vcs_commits %]
-    <li class="vcs_commit_row">[% PROCESS format_commit %]</li>
-  [% END %]
-</ul>
-
-[% BLOCK format_commit %]
-  [% vcs_commit_link(commit) FILTER none %]
-  by
-  [%+ IF commit.author.match('@') AND user.id %]
-    <a href="mailto:[% commit.author FILTER uri %]">
-  [% END %]
-  [% commit.author FILTER email FILTER html %]
-  [% '</a>' IF commit.author.match('@') %]
-  at [% commit.commit_time FILTER time %]
-[% END %]
+[% style_urls.push('extensions/VCS/web/style.css') %]  

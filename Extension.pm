@@ -55,7 +55,7 @@ sub db_schema_abstract_schema {
             creator     => {TYPE => 'INT3', NOTNULL => 1,
                             REFERENCES => {TABLE  => 'profiles',
                                            COLUMN => 'userid'}},
-            revno       => {TYPE => 'INT3', NOTNULL => 1},
+            revno       => {TYPE => 'varchar(255)', NOTNULL => 1},
             commit_time => {TYPE => 'DATETIME', NOTNULL => 1},
             author      => {TYPE => 'MEDIUMTEXT', NOTNULL => 1},
             project     => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
@@ -63,18 +63,22 @@ sub db_schema_abstract_schema {
             type        => {TYPE => 'varchar(16)', NOTNULL => 1},
         ],
         INDEXES => [
-            vcs_commit_bug_id_idx => ['bug_id'],
-            vcs_commit_time_idx   => ['commit_time'],
+            vcs_commit_bug_id_idx    => ['bug_id'],
+            vcs_commit_time_idx      => ['commit_time'],
+            vcs_commit_commit_id_idx => {
+                FIELDS => [qw(commit_id bug_id repo project)],
+                TYPE   => 'UNIQUE'
+            },
         ],
     };
 }
 
 sub install_update_db {
     my ($self, $args) = @_;
-    my $field = new Bugzilla::Field({ name => 'vcs_commit' });
+    my $field = new Bugzilla::Field({ name => 'vcs_commits' });
     if (!$field) {
         Bugzilla::Field->create({
-            name => 'vcs_commit', description => 'Commits',
+            name => 'vcs_commits', description => 'Commits',
         });
     }
 }
@@ -84,9 +88,26 @@ sub install_before_final_checks {
     return if $args->{silent};
     
     my $vcs_repos = Bugzilla->params->{'vcs_repos'};
-    return if trim($vcs_repos) ne 'bzr://bzr.mozilla.org/';
+    return if trim($vcs_repos) ne 'Bzr bzr://bzr.mozilla.org/';
     
-    print install_string('vcs_repos_empty', { urlbase => correct_urlbase() });
+    print "\n", install_string('vcs_repos_empty', { urlbase => correct_urlbase() });
+}
+
+####################
+# Global Accessors #
+####################
+
+sub _vcs_repos {
+    my ($class) = @_;
+    my $vcs_repos = Bugzilla->params->{'vcs_repos'};
+    my %repos;
+    foreach my $line (split "\n", $vcs_repos) {
+        $line = trim($line);
+        next if !$line;
+        my ($type, $repo) = split(/\s+/, $line, 2);
+        $repos{$repo} = $type;
+    }
+    return \%repos;
 }
 
 ###############
@@ -111,29 +132,36 @@ sub config_add_panels {
     $modules->{'VCS'} = 'Bugzilla::Extension::VCS::Params';
 }
 
+sub webservice {
+    my ($self, $args) = @_;
+    $args->{dispatch}->{VCS} = 'Bugzilla::Extension::VCS::WebService';
+}
+
 #############
 # Templates #
 #############
 
 sub template_before_create {
     my ($self, $args) = @_;
-    my $filters = $args->{config}->{FILTERS};
-    $filters->{commit_link} = \&_filter_commit_link;
+    my $variables = $args->{config}->{VARIABLES};
+    $variables->{vcs_commit_link} = \&_create_commit_link;
 }
 
-sub _filter_commit_link {
+sub _create_commit_link {
     my ($commit) = @_;
+    
     my $web_view = Bugzilla->params->{'vcs_web'};
     my $web_url;
     foreach my $line (split "\n", $web_view) {
         $line = trim($line);
+        next if !$line;
         my ($repo, $url) = split(/\s+/, $line, 2);
         if (lc($repo) eq lc($commit->repo)) {
             $web_url = $url;
             last;
         }
     }
-    
+   
     my $revno = html_quote($commit->revno);
     return $revno if !$web_url;
     
