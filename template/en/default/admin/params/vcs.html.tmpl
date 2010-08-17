@@ -34,6 +34,31 @@
   "VCI::VCS::" module</a> for your system.</p>
 [% END %]
 
+[% vcs_web = BLOCK %]
+  A mapping between a particular VCS repository and a web view of that
+  repository. On each line of this parameter, specify first the repository
+  from vcs_repos, then a space, and then the full URL for the web view
+  of a commit in that repository, like this:
+  
+  <p>svn://svn.example.com/svn/
+    http://svn.example.com/viewvc?view=revision&amp;revision=%revno%</p>
+  
+  <p>There are certain special values that you can insert into the web view
+    URL, and they will be translated when linking to the web view for each
+    commit:</p>
+  
+  <dl>
+    <dt>%project%</dt>
+      <dd>The path to the project (branch) that a commit was done against,
+    <dt>%revno%</dt>
+      <dd>The revision number of the commit in that project.</dd>
+    <dt>%commit_id%</dt>
+      <dd>The globally-unique id of the revision for this particular commit.
+        In some VCSes this is a long string, different from %revno%.</dd>
+  </dl>
+[% END %]
+
 [% param_descs = {
   "vcs_repos" => vcs_repos,
+  "vcs_web"   => vcs_web,
 } %]

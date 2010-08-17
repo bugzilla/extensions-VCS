@@ -22,4 +22,13 @@
 %strings = (
     feature_vcs_git => 'VCS: Git Support',
     feature_vcs_svn => 'VCS: Subversion Support',
+    vcs_repos_empty => <<END,
+Now that you have installed the VCS extension, you will have to edit
+its configuration on the "VCS" section of the "Parameters" Administration
+panel:
+
+  ##urlbase##editparams.cgi?section=VCS
+END
+    vcs_web_invalid =>
+        "'##field##' is an invalid field to use in a URL for vcs_web",
 );

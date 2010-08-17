@@ -24,6 +24,9 @@ use strict;
 use base qw(Bugzilla::Object);
 
 use Bugzilla::Bug;
+use Bugzilla::Constants;
+use Bugzilla::Error;
+use Bugzilla::Util qw(trim);
 
 use VCI;
 
@@ -32,6 +35,7 @@ use constant DB_COLUMNS => qw(
     bug_id
     commit_id
     commit_time
+    creator
     id
     project
     repo
@@ -39,7 +43,17 @@ use constant DB_COLUMNS => qw(
     type
 );
 
-use constant LIST_ORDER => 'id';
+use constant LIST_ORDER => 'commit_time';
+
+use constant VALIDATORS => {
+    bug_id    => \&_check_bug_id,
+    commit_id => \&_check_commit_id,
+    creator   => \&_check_creator,
+    project   => \&_check_project,
+    repo      => \&_check_repo,
+    type      => \&_check_type,
+};
+
 use constant VALIDATOR_DEPENDENCIES => {
     commit_id => ['project'],
     project   => ['repo'],
@@ -85,7 +99,14 @@ sub run_create_validators {
 
 sub _check_bug_id {
     my ($self, $value) = @_;
-    return Bugzilla::Bug->check($value)->id;
+    my $bug = Bugzilla::Bug->check($value)->id;
+    Bugzilla->user->can_edit_product($bug->product_id)
+        || ThrowUserError("product_edit_denied", { product => $bug->product });
+    my $privs;
+    $bug->check_can_change_field('vcs_commit', 0, 1, \$privs)
+        || ThrowUserError('illegal_change', { field => 'vcs_commit',
+                                              privs => $privs });
+    return $bug->id;
 }
 
 sub _check_commit_id {
@@ -115,6 +136,12 @@ sub _check_commit_id {
     }
     
     return $commit;
+}
+
+sub _check_creator {
+    my ($self, $args) = @_;
+    Bugzilla->login(LOGIN_REQUIRED);
+    return Bugzilla->user
 }
 
 sub _check_project {

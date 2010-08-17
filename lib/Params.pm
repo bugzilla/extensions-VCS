@@ -10,7 +10,7 @@
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
-# The Original Code is the Bugzilla Bug Tracking System.
+# The Original Code is the VCS Bugzilla Extension.
 #
 # The Initial Developer of the Original Code is Red Hat, Inc.
 # Portions created by the Initial Developer are Copyright (C) 2010
@@ -20,10 +20,12 @@
 #   Max Kanat-Alexander <mkanat@everythingsolved.com>
 
 package Bugzilla::Extension::VCS::Params;
-
 use strict;
 
-use Bugzilla::Config::Common;
+use Bugzilla::Install::Util qw(install_string);
+use Bugzilla::Util;
+
+use Bugzilla::Extension::VCS::Commit;
 
 our $sortkey = 5000;
 
@@ -31,8 +33,32 @@ use constant get_param_list => (
   {
    name => 'vcs_repos',
    type => 'l',
-   default => ''
+   default => 'bzr://bzr.mozilla.org/'
+  },
+  {
+    name => 'vcs_web',
+    type => 'l',
+    default => 'bzr://bzr.mozilla.org/ http://bzr.mozilla.org/%project%/revision/%revno%',
+    checker => \&_check_vcs_web,
   },
 );
+
+sub _check_vcs_web {
+    my ($value) = @_;
+
+    my @db_columns = Bugzilla::Extension::VCS::Commit->DB_COLUMNS;
+    foreach my $line (split "\n", $value) {
+        $line = trim($line);
+        my (undef, $url) = split(/\s+/, $line, 2);
+        my @match_fields = ($url =~ /\%(.+?)\%/g);
+        foreach my $field (@match_fields) {
+            if (!grep { $field eq $_ } @db_columns) {
+                return install_string('vcs_web_invalid', { field => $field });
+            }
+        }
+    }
+    
+    return "";
+}
 
 1;

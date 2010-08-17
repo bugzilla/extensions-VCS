@@ -24,9 +24,18 @@ use strict;
 use warnings;
 use base qw(Bugzilla::WebService);
 use Bugzilla::Error;
+use Bugzilla::Extension::VCS::Commit;
 
 sub add_commit {
     my ($self, $params) = @_;
+    
+    # Don't let people set the "id" field.
+    delete $params->{id};
+    my $created = Bugzilla::Extension::VCS::Commit->create($params);
+    return { commits => [
+                { id => $created->id }
+             ]
+           };
 }
 
 1;
