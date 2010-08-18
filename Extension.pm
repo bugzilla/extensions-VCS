@@ -59,9 +59,9 @@ sub db_schema_abstract_schema {
             commit_time => {TYPE => 'DATETIME', NOTNULL => 1},
             author      => {TYPE => 'MEDIUMTEXT', NOTNULL => 1},
             message     => {TYPE => 'LONGTEXT', NOTNULL => 1},
-            project     => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
-            repo        => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
-            type        => {TYPE => 'varchar(16)', NOTNULL => 1},
+            project     => {TYPE => 'varchar(255)', NOTNULL => 1},
+            repo        => {TYPE => 'varchar(255)', NOTNULL => 1},
+            type        => {TYPE => 'varchar(16)',  NOTNULL => 1},
         ],
         INDEXES => [
             vcs_commit_bug_id_idx    => ['bug_id'],
@@ -70,6 +70,19 @@ sub db_schema_abstract_schema {
                 FIELDS => [qw(revision bug_id repo project)],
                 TYPE   => 'UNIQUE'
             },
+        ],
+    };
+    
+    $schema->{vcs_commit_file} = {
+        FIELDS => [
+            id        => {TYPE => 'INTSERIAL', NOTNULL => 1, PRIMARYKEY => 1},
+            commit_id => {TYPE => 'INT3', NOTNULL => 1,
+                          REFERENCES => {TABLE  => 'vcs_commit',
+                                         COLUMN => 'id',
+                                         DELETE => 'CASCADE'}},
+            name      => {TYPE => 'MEDIUMTEXT', NOTNULL => 1},
+            added     => {TYPE => 'INT3', NOTNULL => 1},
+            removed   => {TYPE => 'INT3', NOTNULL => 1},
         ],
     };
 }

@@ -28,6 +28,8 @@ use Bugzilla::Constants;
 use Bugzilla::Error;
 use Bugzilla::Util qw(trick_taint trim);
 
+use Bugzilla::Extension::VCS::CommitFile;
+
 use VCI;
 
 use constant DB_TABLE   => 'vcs_commit';
@@ -51,7 +53,7 @@ use constant DATE_COLUMNS => qw(commit_time);
 
 use constant VALIDATORS => {
     bug_id    => \&_check_bug_id,
-    revision => \&_check_revision,
+    revision  => \&_check_revision,
     creator   => \&_check_creator,
     project   => \&_check_project,
     repo      => \&_check_repo,
@@ -62,22 +64,24 @@ use constant VALIDATOR_DEPENDENCIES => {
     project   => ['repo'],
 };
 
+use constant CF_CLASS =>  'Bugzilla::Extension::VCS::CommitFile';
+
 ####################
 # Simple Accessors #
 ####################
 
 sub author    { return $_[0]->{author}      }
-sub revision  { return $_[0]->{revision}    }
 sub message   { return $_[0]->{message}     }
 sub project   { return $_[0]->{project}     }
 sub repo      { return $_[0]->{repo}        }
+sub revision  { return $_[0]->{revision}    }
 sub revno     { return $_[0]->{revno}       }
 sub time      { return $_[0]->{commit_time} }
 
-sub bug {
+sub files {
     my ($self) = @_;
-    $self->{bug} ||= Bugzilla::Bug->check({ id => $self->{bug_id} });
-    return $self->{bug};
+    $self->{files} ||= CF_CLASS->match({ commit_id => $self->id });
+    return $self->{files};
 }
 
 #########################
@@ -99,7 +103,47 @@ sub run_create_validators {
         $params->{$key} = $commit->$key;
         trick_taint($params->{$key});
     }
+    
+    my @file_rows;
+    foreach my $file (@{ $commit->as_diff->files }) {
+        my $path = $file->path;
+        my ($added, $removed) = (0, 0);
+        foreach my $change (@{ $file->changes }) {
+            my $type = $change->type;
+            if ($type eq 'ADD') {
+                $added += $change->size;
+            }
+            elsif ($type eq 'REMOVE') {
+                $removed += $change->size;
+            }
+        }
+        my $file_params = { name => $path, added => $added,
+                            removed => $removed };
+
+        CF_CLASS->check_required_create_fields($file_params);
+        $file_params = CF_CLASS->run_create_validators($file_params);
+        push(@file_rows, $file_params);
+    }
+    
+    $params->{files} = \@file_rows;
+    
     return $params;
+}
+
+sub create {
+    my $self = shift;
+    $self->check_required_create_fields(@_);
+    my $params = $self->run_create_validators(@_);
+    
+    my $files = delete $params->{files};
+    
+    my $object = $self->insert_create_data($params);
+    foreach my $file (@$files) {
+        $file->{commit_id} = $object->id;
+        CF_CLASS->insert_create_data($file);
+    }
+    
+    return $object;
 }
 
 ##############
@@ -122,7 +166,7 @@ sub _check_revision {
     my ($invocant, $value, undef, $params) = @_;
     $value = trim($value);
     
-    if ($value eq '' or !defined $value) {
+    if (!defined $value or $value eq '') {
         ThrowCodeError('param_required',
                        { function => "$invocant->create",
                          param => 'revision' });

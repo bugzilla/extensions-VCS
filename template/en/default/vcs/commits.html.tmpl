@@ -18,9 +18,20 @@
   #   Max Kanat-Alexander <mkanat@everythingsolved.com>
   #%]
 
+<script type="text/javascript">
+<!--
+  function toggleCommitDetails(commit_row, commit_id) {
+      var details = document.getElementById('vcs_commit_' + commit_id);
+      bz_toggleClass(details, 'bz_default_hidden');
+      bz_toggleClass(commit_row, 'vcs_expanded_item');
+  }
+// -->
+</script>
+
 <ul class="vcs_commits_list">
   [% FOREACH commit = bug.vcs_commits %]
-    <li class="vcs_commit_row">[% PROCESS format_commit %]</li>
+    <li onclick="toggleCommitDetails(this, [% commit.id FILTER js %])"
+        class="vcs_commit_row">[% PROCESS format_commit %]</li>
   [% END %]
 </ul>
 
@@ -32,5 +43,23 @@
   [% END %]
   [% commit.author FILTER email FILTER html %]
   [% '</a>' IF commit.author.match('@') %]
-  at [% commit.commit_time FILTER time %]
+  at <span class="vcs_commit_time">[% commit.commit_time FILTER time %]</span>
+  <div class="vcs_commit_details bz_default_hidden"
+       id="vcs_commit_[% commit.id FILTER html %]">
+    <p class="vcs_commit_repo">
+      Checked in to
+      <strong>[% commit.repo FILTER html %][% commit.project FILTER html %]</strong>
+    </p>
+    <p class="vcs_commit_files_changed">
+      <strong>[% commit.files.size FILTER html %]</strong> files changed:
+    </p>
+    <ul class="vcs_commit_files">
+      [% FOREACH file = commit.files %]
+        <li>[% file.name FILTER html %]
+          (+[% file.added FILTER html %]
+           / -[% file.removed FILTER html %])</li>
+      [% END %]
+    </ul>
+    <p class="vcs_commit_message">[% commit.message FILTER html_linebreak %]</p>
+  </div>
 [% END %]
