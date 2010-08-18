@@ -48,7 +48,7 @@ sub sync_project {
     my $count = 0;
     foreach my $commit (@$commits) {
         sync_commit($commit);
-        indicate_progress({ total => $total, current => ++$count, every => 20 });
+        indicate_progress({ total => $total, current => ++$count, every => 50 });
     }
 }
 

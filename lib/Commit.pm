@@ -153,7 +153,7 @@ sub create_from_commit {
     my $project = $commit->project;
     my $repo    = $project->repository;
     return $class->create({
-        project => $project->name, repo => $repo->root, bug_id => $bug,
+        project => $project, repo => $repo, bug_id => $bug,
         revision => $commit,
     });
 }
@@ -228,6 +228,10 @@ sub _check_creator {
 
 sub _check_project {
     my ($invocant, $value, undef, $params) = @_;
+    
+    # Allow passing a VCI::Abstract::Project.
+    return $value if blessed $value;
+    
     $value = trim($value);
     
     if ($value eq '' or !defined $value) {
@@ -240,6 +244,14 @@ sub _check_project {
 
 sub _check_repo {
     my ($invocant, $value, undef, $params) = @_;
+    
+    # Allow passing a VCI::Abstract::Repository. In this case we bypass
+    # the normal restrictions.
+    if (blessed $value) {
+        $params->{type} = $value->vci->type;
+        $value = $value->root;
+    }
+    
     $value = trim($value);
 
     if ($value eq '' or !defined $value) {
