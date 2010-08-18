@@ -58,6 +58,7 @@ sub db_schema_abstract_schema {
             revno       => {TYPE => 'varchar(255)', NOTNULL => 1},
             commit_time => {TYPE => 'DATETIME', NOTNULL => 1},
             author      => {TYPE => 'MEDIUMTEXT', NOTNULL => 1},
+            message     => {TYPE => 'LONGTEXT', NOTNULL => 1},
             project     => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
             repo        => {TYPE => 'MEDIUMTEXT',  NOTNULL => 1},
             type        => {TYPE => 'varchar(16)', NOTNULL => 1},

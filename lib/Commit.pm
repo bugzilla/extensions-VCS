@@ -39,6 +39,7 @@ use constant DB_COLUMNS => qw(
     commit_time
     creator
     id
+    message
     project
     repo
     revno
@@ -66,6 +67,7 @@ use constant VALIDATOR_DEPENDENCIES => {
 
 sub author    { return $_[0]->{author}      }
 sub commit_id { return $_[0]->{commit_id}   }
+sub message   { return $_[0]->{message}     }
 sub project   { return $_[0]->{project}     }
 sub repo      { return $_[0]->{repo}        }
 sub revno     { return $_[0]->{revno}       }
@@ -90,12 +92,13 @@ sub run_create_validators {
     my $commit = delete $params->{commit_id};
     $params->{commit_id} = $commit->revision;
     $params->{revno} = $commit->revno;
+    $params->{message} = $commit->message;
     $params->{commit_time} =
         $commit->time->clone->set_time_zone(Bugzilla->local_timezone);
     $params->{author} = $commit->author;
     # These are all tainted from the VCS, but are safe to insert
     # into the DB.
-    foreach my $key (qw(commit_id revno commit_time author)) {
+    foreach my $key qw(commit_id revno commit_time author message) {
         trick_taint($params->{$key});
     }
     return $params;
