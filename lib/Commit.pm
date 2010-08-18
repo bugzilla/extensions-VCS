@@ -30,34 +30,35 @@ use Bugzilla::Util qw(trick_taint trim);
 
 use VCI;
 
-use constant DB_TABLE => 'vcs_commit';
+use constant DB_TABLE   => 'vcs_commit';
+use constant LIST_ORDER => 'commit_time';
 
 use constant DB_COLUMNS => qw(
     author
     bug_id
-    commit_id
     commit_time
     creator
     id
     message
     project
     repo
+    revision
     revno
     type
 );
 
-use constant LIST_ORDER => 'commit_time';
+use constant DATE_COLUMNS => qw(commit_time);
 
 use constant VALIDATORS => {
     bug_id    => \&_check_bug_id,
-    commit_id => \&_check_commit_id,
+    revision => \&_check_revision,
     creator   => \&_check_creator,
     project   => \&_check_project,
     repo      => \&_check_repo,
 };
 
 use constant VALIDATOR_DEPENDENCIES => {
-    commit_id => ['project'],
+    revision  => ['project'],
     project   => ['repo'],
 };
 
@@ -66,7 +67,7 @@ use constant VALIDATOR_DEPENDENCIES => {
 ####################
 
 sub author    { return $_[0]->{author}      }
-sub commit_id { return $_[0]->{commit_id}   }
+sub revision  { return $_[0]->{revision}    }
 sub message   { return $_[0]->{message}     }
 sub project   { return $_[0]->{project}     }
 sub repo      { return $_[0]->{repo}        }
@@ -89,16 +90,13 @@ sub run_create_validators {
     # Callers can't set type--it's always set by _check_repo.
     delete $params->{type};
     $params = $self->SUPER::run_create_validators(@_);
-    my $commit = delete $params->{commit_id};
-    $params->{commit_id} = $commit->revision;
-    $params->{revno} = $commit->revno;
-    $params->{message} = $commit->message;
+    my $commit = delete $params->{revision};
     $params->{commit_time} =
         $commit->time->clone->set_time_zone(Bugzilla->local_timezone);
-    $params->{author} = $commit->author;
     # These are all tainted from the VCS, but are safe to insert
     # into the DB.
-    foreach my $key qw(commit_id revno commit_time author message) {
+    foreach my $key qw(revision revno author message) {
+        $params->{$key} = $commit->$key;
         trick_taint($params->{$key});
     }
     return $params;
@@ -120,14 +118,14 @@ sub _check_bug_id {
     return $bug->id;
 }
 
-sub _check_commit_id {
+sub _check_revision {
     my ($invocant, $value, undef, $params) = @_;
     $value = trim($value);
     
     if ($value eq '' or !defined $value) {
         ThrowCodeError('param_required',
                        { function => "$invocant->create",
-                         param => 'commit_id' });
+                         param => 'revision' });
     }
     
     local $ENV{PATH} = Bugzilla->params->{'vcs_path'};
@@ -136,7 +134,7 @@ sub _check_commit_id {
     my $commit = eval { $project->get_commit(revision => $value) };
     if (!$commit) {
         if (my $error = $@) {
-            ThrowUserError('vcs_commit_id_error',
+            ThrowUserError('vcs_revision_error',
                 { id => $value, repo => $repo->root,
                   project => $project->name, err => $error });
         }

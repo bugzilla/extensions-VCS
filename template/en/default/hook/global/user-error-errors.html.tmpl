@@ -18,7 +18,7 @@
   #   Max Kanat-Alexander <mkanat@everythingsolved.com>
   #%]
 
-[% IF error == "vcs_commit_id_error" %]
+[% IF error == "vcs_revision_error" %]
   An error occurred while attempting to fetch commit [% id FILTER html %]
   from the "[% project FILTER html %]" project in the
   "[% repo FILTER html %]" repository. Sometimes this means that

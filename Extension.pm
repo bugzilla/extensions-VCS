@@ -51,7 +51,7 @@ sub db_schema_abstract_schema {
                             REFERENCES => {TABLE  => 'bugs',
                                            COLUMN => 'bug_id',
                                            DELETE => 'CASCADE'}},
-            commit_id   => {TYPE => 'varchar(255)', NOTNULL => 1},
+            revision   => {TYPE => 'varchar(255)', NOTNULL => 1},
             creator     => {TYPE => 'INT3', NOTNULL => 1,
                             REFERENCES => {TABLE  => 'profiles',
                                            COLUMN => 'userid'}},
@@ -66,8 +66,8 @@ sub db_schema_abstract_schema {
         INDEXES => [
             vcs_commit_bug_id_idx    => ['bug_id'],
             vcs_commit_time_idx      => ['commit_time'],
-            vcs_commit_commit_id_idx => {
-                FIELDS => [qw(commit_id bug_id repo project)],
+            vcs_commit_revision_idx => {
+                FIELDS => [qw(revision bug_id repo project)],
                 TYPE   => 'UNIQUE'
             },
         ],
