@@ -30,6 +30,7 @@ use Bugzilla::Util qw(trick_taint trim);
 
 use Bugzilla::Extension::VCS::CommitFile;
 
+use Scalar::Util qw(blessed);
 use VCI;
 
 use constant DB_TABLE   => 'vcs_commit';
@@ -146,13 +147,35 @@ sub create {
     return $object;
 }
 
+# Creates a Commit from a VCI::Abstract::Commit
+sub create_from_commit {
+    my ($class, $commit, $bug) = @_;
+    my $project = $commit->project;
+    my $repo    = $project->repository;
+    return $class->create({
+        project => $project->name, repo => $repo->root, bug_id => $bug,
+        revision => $commit,
+    });
+}
+
+sub exists {
+    my ($class, $commit, $bug) = @_;
+    my $project = $commit->project;
+    my $repo    = $project->repository;
+    my $results = $class->match({
+        project => $project->name, repo => $repo->root, bug_id => $bug->id,
+        revision => $commit->revision,
+    });
+    return @$results ? 1 : 0;
+}
+
 ##############
 # Validators #
 ##############
 
 sub _check_bug_id {
     my ($self, $value) = @_;
-    my $bug = Bugzilla::Bug->check($value);
+    my $bug = blessed($value) ? $value : Bugzilla::Bug->check($value);
     Bugzilla->user->can_edit_product($bug->product_id)
         || ThrowUserError("product_edit_denied", { product => $bug->product });
     my $privs;
@@ -164,6 +187,11 @@ sub _check_bug_id {
 
 sub _check_revision {
     my ($invocant, $value, undef, $params) = @_;
+    
+    # This allows us to pass a VCI::Abstract::Commit object directly
+    # as the revision argument.
+    return $value if blessed $value;
+    
     $value = trim($value);
     
     if (!defined $value or $value eq '') {
