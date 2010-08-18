@@ -20,17 +20,20 @@
 
 <script type="text/javascript">
 <!--
-  function toggleCommitDetails(commit_row, commit_id) {
+  function toggleCommitDetails(commit_id) {
       var details = document.getElementById('vcs_commit_' + commit_id);
+      var row = document.getElementById('vcs_commit_row_' + commit_id);
       bz_toggleClass(details, 'bz_default_hidden');
-      bz_toggleClass(commit_row, 'vcs_expanded_item');
+      bz_toggleClass(row, 'vcs_expanded_item');
   }
 // -->
 </script>
 
 <ul class="vcs_commits_list">
   [% FOREACH commit = bug.vcs_commits %]
-    <li onclick="toggleCommitDetails(this, [% commit.id FILTER js %])"
+    <li onclick="toggleCommitDetails([% commit.id FILTER js %])"
+        
+        id="vcs_commit_row_[% commit.id FILTER html %]"
         class="vcs_commit_row">[% PROCESS format_commit %]</li>
   [% END %]
 </ul>
@@ -42,7 +45,7 @@
     <a href="mailto:[% commit.author FILTER uri %]">
   [% END %]
   [% commit.author FILTER email FILTER html %]
-  [% '</a>' IF commit.author.match('@') %]
+  [% '</a>' IF commit.author.match('@') AND user.id %]
   at <span class="vcs_commit_time">[% commit.commit_time FILTER time %]</span>
   <div class="vcs_commit_details bz_default_hidden"
        id="vcs_commit_[% commit.id FILTER html %]">
