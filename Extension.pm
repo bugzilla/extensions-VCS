@@ -159,6 +159,10 @@ sub template_before_create {
     my ($self, $args) = @_;
     my $variables = $args->{config}->{VARIABLES};
     $variables->{vcs_commit_link} = \&_create_commit_link;
+    
+    my $filters = $args->{config}->{FILTERS};
+    my $html_filter = $filters->{html};
+    $filters->{vcs_br} = \&_filter_br;
 }
 
 sub _create_commit_link {
@@ -188,6 +192,14 @@ sub _create_commit_link {
     }
     $web_url = html_quote($web_url);
     return "<a class=\"vcs_commit_link\" href=\"$web_url\">$revno</a>";
+}
+
+sub _filter_br {
+    my ($value) = @_;
+    $value =~ s/\r//g;
+    $value =~ s/\s+$//sg;
+    $value =~ s/\n/<br>/sg;
+    return $value;
 }
 
 __PACKAGE__->NAME;

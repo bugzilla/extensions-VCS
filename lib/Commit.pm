@@ -230,7 +230,7 @@ sub _check_project {
     my ($invocant, $value, undef, $params) = @_;
     
     # Allow passing a VCI::Abstract::Project.
-    return $value if blessed $value;
+    $value = $value->name if blessed $value;
     
     $value = trim($value);
     
@@ -249,7 +249,7 @@ sub _check_repo {
     # the normal restrictions.
     if (blessed $value) {
         $params->{type} = $value->vci->type;
-        $value = $value->root;
+        return $value->root;
     }
     
     $value = trim($value);

@@ -45,10 +45,14 @@ sub sync_project {
     my ($project) = @_;
     my $commits = $project->history->commits;
     my $total = scalar(@$commits);
+    print "$total commits to examine for syncing...\n";
     my $count = 0;
     foreach my $commit (@$commits) {
         sync_commit($commit);
-        indicate_progress({ total => $total, current => ++$count, every => 50 });
+        if (!$switch{'verbose'}) {
+            indicate_progress({ total => $total, current => ++$count,
+                                every => 30 });
+        }
     }
 }
 

@@ -47,15 +47,27 @@
   [% commit.author FILTER email FILTER html %]
   [% '</a>' IF commit.author.match('@') AND user.id %]
   at <span class="vcs_commit_time">[% commit.commit_time FILTER time %]</span>
+  
   <div class="vcs_commit_details bz_default_hidden"
        id="vcs_commit_[% commit.id FILTER html %]">
+    
     <p class="vcs_commit_repo">
       Checked in to
       <strong>[% commit.repo FILTER html %][% commit.project FILTER html %]</strong>
     </p>
-    <p class="vcs_commit_files_changed">
-      <strong>[% commit.files.size FILTER html %]</strong> files changed:
+    
+    <p class="vcs_commit_message">
+      [% commit.message FILTER quoteUrls(bug) FILTER vcs_br %]
     </p>
+    
+    <p class="vcs_commit_files_changed">
+      [% IF commit.files.size == 1 %]
+        <strong>[% commit.files.size FILTER html %]</strong> file changed:
+      [% ELSE %]
+        <strong>[% commit.files.size FILTER html %]</strong> files changed:
+      [% END %]
+    </p>
+    
     <ul class="vcs_commit_files">
       [% FOREACH file = commit.files %]
         <li>[% file.name FILTER html %]
@@ -63,6 +75,5 @@
            / -[% file.removed FILTER html %])</li>
       [% END %]
     </ul>
-    <p class="vcs_commit_message">[% commit.message FILTER html_linebreak %]</p>
   </div>
 [% END %]
