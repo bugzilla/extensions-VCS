@@ -179,8 +179,8 @@ sub _check_bug_id {
     Bugzilla->user->can_edit_product($bug->product_id)
         || ThrowUserError("product_edit_denied", { product => $bug->product });
     my $privs;
-    $bug->check_can_change_field('vcs_commit', 0, 1, \$privs)
-        || ThrowUserError('illegal_change', { field => 'vcs_commit',
+    $bug->check_can_change_field('vcs_commits', 0, 1, \$privs)
+        || ThrowUserError('illegal_change', { field => 'vcs_commits',
                                               privs => $privs });
     return $bug->id;
 }
