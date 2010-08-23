@@ -22,6 +22,9 @@
 %strings = (
     feature_vcs_git => 'VCS: Git Support',
     feature_vcs_svn => 'VCS: Subversion Support',
+    vcs_check_reqs => 'Checking VCS support:',
+    vcs_item_not_installed => '##item## is not installed',
+    vcs_module_missing => 'missing perl module(s) (see above)',
     vcs_repos_empty => <<END,
 Now that you have installed the VCS extension, you will have to edit
 its configuration on the "VCS" section of the "Parameters" Administration
@@ -29,6 +32,7 @@ panel:
 
   ##urlbase##editparams.cgi?section=vcs
 END
+    vcs_requirements_missing => 'some requirements missing:',
     vcs_web_invalid =>
         "'##field##' is an invalid field to use in a URL for vcs_web",
 );

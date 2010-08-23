@@ -100,7 +100,31 @@ sub install_update_db {
 sub install_before_final_checks {
     my ($self, $args) = @_;
     return if $args->{silent};
-    
+
+    require Class::MOP;
+    print "\n", install_string('vcs_check_reqs'), "\n";
+    foreach my $type qw(Bzr Cvs Git Hg Svn) {
+        print "$type: ";
+        my $class = "VCI::VCS::$type";
+        my $loaded = eval { Class::MOP::load_class($class) };
+        if (!$loaded) {
+            print install_string('vcs_module_missing'), "\n";
+            next;
+        }
+        
+        my @need = $class->missing_requirements;
+        if (@need) {
+            print install_string('vcs_requirements_missing'), "\n";
+            foreach my $item (@need) {
+                print "  ", install_string('vcs_item_not_installed',
+                                             { item => $item }), "\n";
+            }
+        }
+        else {
+            print install_string('module_ok'), "\n";
+        }
+    }
+        
     my $vcs_repos = Bugzilla->params->{'vcs_repos'};
     return if trim($vcs_repos) ne 'Bzr bzr://bzr.mozilla.org/';
     
