@@ -128,7 +128,8 @@ sub install_before_final_checks {
     my $vcs_repos = Bugzilla->params->{'vcs_repos'};
     return if trim($vcs_repos) ne 'Bzr bzr://bzr.mozilla.org/';
     
-    print "\n", install_string('vcs_repos_empty', { urlbase => correct_urlbase() });
+    print "\n", install_string('vcs_repos_empty',
+                               { urlbase => correct_urlbase() });
 }
 
 ####################

@@ -267,7 +267,10 @@ sub _check_repo {
     
     $params->{type} = $allowed_repos->{$value};
     
-    return $value;
+    # Normalize the repo name.
+    my $repo = VCI->connect(type => $params->{type}, repo => $value);
+    
+    return $repo->root;
 }
 
 1;
