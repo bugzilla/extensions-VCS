@@ -27,10 +27,9 @@ use constant REQUIRED_MODULES => [
     {
         package => 'VCI',
         module  => 'VCI',
-        # 0.5.4 changed VCI's required modules to a longer list, so that
-        # we don't have to manually specify all the optional modules here
-        # for every single VCS.
-        version => '0.5.4',
+        # 0.6.1 is the first stable version to have "revno" and
+        # "missing_requirements".
+        version => '0.6.1',
     },
 ];
 
