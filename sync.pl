@@ -21,7 +21,7 @@
 
 use strict;
 use warnings;
-use lib qw(. lib);
+use lib qw(lib);
 
 use Bugzilla;
 use Bugzilla::Install::Util qw(indicate_progress);

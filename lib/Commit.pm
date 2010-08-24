@@ -54,10 +54,10 @@ use constant DATE_COLUMNS => qw(commit_time);
 
 use constant VALIDATORS => {
     bug_id    => \&_check_bug_id,
-    revision  => \&_check_revision,
     creator   => \&_check_creator,
     project   => \&_check_project,
     repo      => \&_check_repo,
+    revision  => \&_check_revision,
 };
 
 use constant VALIDATOR_DEPENDENCIES => {
@@ -66,6 +66,9 @@ use constant VALIDATOR_DEPENDENCIES => {
 };
 
 use constant CF_CLASS =>  'Bugzilla::Extension::VCS::CommitFile';
+
+# For Bugzilla 3.6 compatibility.
+use constant REQUIRED_CREATE_FIELDS => ();
 
 ####################
 # Simple Accessors #
@@ -90,12 +93,29 @@ sub files {
 #########################
 
 sub run_create_validators {
-    my $self = shift;
+    my $class = shift;
     my ($params) = @_;
     # Callers can't set type--it's always set by _check_repo.
     delete $params->{type};
-    $params = $self->SUPER::run_create_validators(@_);
-    my $commit = delete $params->{revision};
+    
+    # We behave differently depending on whether this Bugzilla supports
+    # VALIDATOR_DEPENDENCIES or not. (Bugzilla 3.6 does not support it.)
+    my $commit;
+    if (Bugzilla::Object->can('VALIDATOR_DEPENDENCIES')) {
+        $params = $class->SUPER::run_create_validators(@_);
+        $commit = delete $params->{revision};
+    }
+    else {
+        my ($revision, $project, $repo) =
+            delete @$params{qw(revision project repo)};
+        # This has to always be set so that _check_creator runs.
+        $params->{creator} = undef;
+        $params = $class->SUPER::run_create_validators(@_);
+        $params->{repo} = $class->_check_repo($repo, undef, $params);
+        $params->{project} = $class->_check_project($project, undef, $params);
+        $commit = $class->_check_revision($revision, undef, $params);
+    }
+    
     $params->{commit_time} =
         $commit->time->clone->set_time_zone(Bugzilla->local_timezone);
     # These are all tainted from the VCS, but are safe to insert
@@ -199,7 +219,7 @@ sub _check_revision {
                        { function => "$invocant->create",
                          param => 'revision' });
     }
-    
+
     local $ENV{PATH} = Bugzilla->params->{'vcs_path'};
     my $repo = VCI->connect(repo => $params->{repo}, type => $params->{type});
     my $project = $repo->get_project(name => $params->{project});
@@ -268,6 +288,7 @@ sub _check_repo {
     $params->{type} = $allowed_repos->{$value};
     
     # Normalize the repo name.
+    trick_taint($value);
     my $repo = VCI->connect(type => $params->{type}, repo => $value);
     
     return $repo->root;
