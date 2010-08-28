@@ -1,0 +1,10 @@
+0.1 Aug 28, 2010
+    - First release.
+    - Shows Commit info on show_bug.cgi.
+    - Has sync.pl, a script to sync existing commits into Bugzilla.
+    - Has hook.pl, a script to help in writing VCS hooks that update
+      Bugzilla.
+    - Adds the VCS.add_commit WebService method.
+    - Supports CVS, Svn, Hg, and Bzr. Git is also theoretically
+      supported. However, the Git driver is not taint-safe, and so will
+      throw errors if run in a normal Bugzilla environment.

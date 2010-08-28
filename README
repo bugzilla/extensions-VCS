@@ -1,0 +1,12 @@
+Installation
+------------
+This extension can be installed on Bugzilla 3.6.1 or any later version,
+like this:
+
+1. Move this directory (the "VCS" directory) into the "extensions" directory
+   in your Bugzilla installation. Note that parts of your Bugzilla may
+   now become non-functional until you finish the installation instructions.
+2. Go to your Bugzilla directory and run ./checksetup.pl
+3. Follow all of the instructions that checksetup.pl prints. You will
+   probably have to install some Perl modules and then re-run 
+   checksetup.pl again.
