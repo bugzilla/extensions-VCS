@@ -161,12 +161,12 @@ If you want to sync only one project from the repo, specify it here.
 If you want to match other words than "bug", you can specify another
 word here. This can be specified multiple times.
 
-=item B<--dry-run>
+=item B<--dry-run> (or B<-n>)
 
 Specify this to test out the sync without actually modifying the database
 permanently.
 
-=item B<--verbose>
+=item B<--verbose> (or B<-v>)
 
 Print out more info about what the script is doing. Specify multiple times
 to get even more verbose.
