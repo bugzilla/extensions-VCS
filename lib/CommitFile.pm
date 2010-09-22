@@ -42,6 +42,8 @@ use constant VALIDATORS => {
     name      => \&_check_required,
 };
 
+use constant REQUIRED_CREATE_FIELDS => qw(name);
+
 ####################
 # Simple Accessors #
 ####################
