@@ -33,6 +33,7 @@ panel:
   ##urlbase##editparams.cgi?section=vcs
 END
     vcs_requirements_missing => 'some requirements missing:',
+    vcs_set_uuid => "Setting the uuid on existing commits...",
     vcs_web_invalid =>
         "'##field##' is an invalid field to use in a URL for vcs_web",
 );

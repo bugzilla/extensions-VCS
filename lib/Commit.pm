@@ -48,6 +48,8 @@ use constant DB_COLUMNS => qw(
     revision
     revno
     type
+    uuid
+    vci
 );
 
 use constant DATE_COLUMNS => qw(commit_time);
@@ -58,14 +60,15 @@ use constant VALIDATORS => {
     project   => \&_check_project,
     repo      => \&_check_repo,
     revision  => \&_check_revision,
+    vci       => \&_check_vci,
 };
 
 use constant VALIDATOR_DEPENDENCIES => {
-    revision  => ['project'],
+    revision  => ['project', 'bug_id'],
     project   => ['repo'],
 };
 
-use constant CF_CLASS =>  'Bugzilla::Extension::VCS::CommitFile';
+use constant CF_CLASS => 'Bugzilla::Extension::VCS::CommitFile';
 
 # For Bugzilla 3.6 compatibility.
 use constant REQUIRED_CREATE_FIELDS => ();
@@ -81,6 +84,7 @@ sub repo      { return $_[0]->{repo}        }
 sub revision  { return $_[0]->{revision}    }
 sub revno     { return $_[0]->{revno}       }
 sub time      { return $_[0]->{commit_time} }
+sub uuid      { return $_[0]->{uuid}        }
 
 sub files {
     my ($self) = @_;
@@ -108,19 +112,22 @@ sub run_create_validators {
     else {
         my ($revision, $project, $repo) =
             delete @$params{qw(revision project repo)};
-        # This has to always be set so that _check_creator runs.
+        # This has to always be set so that _check_creator and _check_vci run.
         $params->{creator} = undef;
+        $params->{vci} = undef;
         $params = $class->SUPER::run_create_validators(@_);
         $params->{repo} = $class->_check_repo($repo, undef, $params);
         $params->{project} = $class->_check_project($project, undef, $params);
         $commit = $class->_check_revision($revision, undef, $params);
     }
     
+    $params->{bug_id} = $params->{bug_id}->id;
+    
     $params->{commit_time} =
         $commit->time->clone->set_time_zone(Bugzilla->local_timezone);
     # These are all tainted from the VCS, but are safe to insert
     # into the DB.
-    foreach my $key qw(revision revno author message) {
+    foreach my $key qw(revision revno author message uuid) {
         $params->{$key} = $commit->$key;
         trick_taint($params->{$key});
     }
@@ -180,12 +187,8 @@ sub create_from_commit {
 
 sub exists {
     my ($class, $commit, $bug) = @_;
-    my $project = $commit->project;
-    my $repo    = $project->repository;
     my $results = $class->match({
-        project => $project->name, repo => $repo->root, bug_id => $bug->id,
-        revision => $commit->revision,
-    });
+        uuid => $commit->uuid, bug_id => $bug->id });
     return @$results ? 1 : 0;
 }
 
@@ -202,7 +205,7 @@ sub _check_bug_id {
     $bug->check_can_change_field('vcs_commits', 0, 1, \$privs)
         || ThrowUserError('illegal_change', { field => 'vcs_commits',
                                               privs => $privs });
-    return $bug->id;
+    return $bug;
 }
 
 sub _check_revision {
@@ -210,31 +213,25 @@ sub _check_revision {
     
     # This allows us to pass a VCI::Abstract::Commit object directly
     # as the revision argument.
-    return $value if blessed $value;
-    
-    $value = trim($value);
-    
-    if (!defined $value or $value eq '') {
-        ThrowCodeError('param_required',
-                       { function => "$invocant->create",
-                         param => 'revision' });
+    my $commit;
+    if (blessed $value) {
+        $commit = $value;
     }
+    else {
+        $value = trim($value);
+        
+        if (!defined $value or $value eq '') {
+            ThrowCodeError('param_required',
+                           { function => "$invocant->create",
+                             param => 'revision' });
+        }
 
-    local $ENV{PATH} = Bugzilla->params->{'vcs_path'};
-    my $repo = VCI->connect(repo => $params->{repo}, type => $params->{type});
-    my $project = $repo->get_project(name => $params->{project});
-    my $commit = eval { $project->get_commit(revision => $value) };
-    if (!$commit) {
-        if (my $error = $@) {
-            ThrowUserError('vcs_revision_error',
-                { id => $value, repo => $repo->root,
-                  project => $project->name, err => $error });
-        }
-        else {
-            ThrowUserError('vcs_no_such_commit',
-                { id => $value, repo => $repo->root,
-                  project => $project->name });
-        }
+        $commit = $invocant->get_commit({ %$params, revision => $value });
+    }
+    
+    if ($invocant->exists($commit, $params->{bug_id})) {
+        ThrowUserError('vcs_duplicate_commit',
+                       { commit => $commit, bug => $params->{bug_id} });
     }
     
     return $commit;
@@ -293,5 +290,36 @@ sub _check_repo {
     
     return $repo->root;
 }
+
+sub _check_vci { return VCI->VERSION }
+
+#####################
+# Utility Functions #
+#####################
+
+sub get_commit {
+    my ($class, $params) = @_;
+
+    local $ENV{PATH} = Bugzilla->params->{'vcs_path'};
+
+    my $repo = VCI->connect(repo => $params->{repo}, type => $params->{type});
+    my $project = $repo->get_project(name => $params->{project});
+    my $commit = eval { $project->get_commit(revision => $params->{revision} ) };
+    if (!$commit) {
+        if (my $error = $@) {
+            ThrowUserError('vcs_revision_error',
+                { id => $params->{revision}, repo => $repo->root,
+                  project => $project->name, err => $error });
+        }
+        else {
+            ThrowUserError('vcs_no_such_commit',
+                { id => $params->{revision}, repo => $repo->root,
+                  project => $project->name });
+        }
+    }
+
+    return $commit;   
+}
+
 
 1;

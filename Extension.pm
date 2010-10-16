@@ -62,14 +62,14 @@ sub db_schema_abstract_schema {
             project     => {TYPE => 'varchar(255)', NOTNULL => 1},
             repo        => {TYPE => 'varchar(255)', NOTNULL => 1},
             type        => {TYPE => 'varchar(16)',  NOTNULL => 1},
+            uuid        => {TYPE => 'varchar(255)', NOTNULL => 1},
+            vci         => {TYPE => 'varchar(10)',  NOTNULL => 1},
         ],
         INDEXES => [
-            vcs_commit_bug_id_idx    => ['bug_id'],
-            vcs_commit_time_idx      => ['commit_time'],
-            vcs_commit_revision_idx => {
-                FIELDS => [qw(revision bug_id repo project)],
-                TYPE   => 'UNIQUE'
-            },
+            vcs_commit_bug_id_idx => ['bug_id'],
+            vcs_commit_time_idx   => ['commit_time'],
+            vcs_commit_uuid_idx   => {
+                FIELDS => [qw(uuid bug_id)], TYPE => 'UNIQUE' },
         ],
     };
     
@@ -89,12 +89,51 @@ sub db_schema_abstract_schema {
 
 sub install_update_db {
     my ($self, $args) = @_;
+    my $dbh = Bugzilla->dbh;
+    
     my $field = new Bugzilla::Field({ name => 'vcs_commits' });
     if (!$field) {
         Bugzilla::Field->create({
             name => 'vcs_commits', description => 'Commits',
         });
     }
+    
+    $dbh->bz_add_column('vcs_commit', 'vci',
+                        {TYPE => 'varchar(10)',  NOTNULL => 1}, VCI->VERSION);
+    _add_uuid_column();
+    $dbh->bz_drop_index('vcs_commit', 'vcs_commit_revision_idx');
+}
+
+sub _add_uuid_column {
+    my $dbh = Bugzilla->dbh;
+    my $uuid_col = $dbh->bz_column_info('vcs_commit', 'uuid');
+    return if $uuid_col && $uuid_col->{NOTNULL};
+    
+    require Bugzilla::Extension::VCS::Commit;
+    
+    $dbh->bz_add_column('vcs_commit', 'uuid', {TYPE => 'varchar(255)'});
+    $dbh->bz_add_index('vcs_commit', 'vcs_commit_uuid_idx',
+                       { FIELDS => [qw(uuid bug_id)], TYPE => 'UNIQUE' });
+    
+    $dbh->bz_start_transaction();
+    
+    print install_string('vcs_set_uuid'), "\n";
+    
+    my $commits = $dbh->selectall_arrayref(
+        'SELECT id, repo, project, revision, type
+           FROM vcs_commit', {Slice=>{}});
+    
+    my $update_sth = $dbh->prepare(
+        'UPDATE vcs_commit SET uuid = ? WHERE id = ?');
+    foreach my $commit (@$commits) {
+        my $vci_commit = Bugzilla::Extension::VCS::Commit->get_commit($commit);
+        $update_sth->execute($vci_commit->uuid, $commit->{id});
+    }
+    
+    $dbh->bz_commit_transaction();
+    
+    $dbh->bz_alter_column('vcs_commit', 'uuid',
+                          {TYPE => 'varchar(255)', NOTNULL => 1});
 }
 
 sub install_before_final_checks {

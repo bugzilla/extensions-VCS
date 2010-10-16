@@ -29,7 +29,7 @@ use constant REQUIRED_MODULES => [
         module  => 'VCI',
         # 0.6.1 is the first stable version to have "revno" and
         # "missing_requirements".
-        version => '0.6.1',
+        version => '0.7.0',
     },
 ];
 

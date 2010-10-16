@@ -18,7 +18,12 @@
   #   Max Kanat-Alexander <mkanat@everythingsolved.com>
   #%]
 
-[% IF error == "vcs_revision_error" %]
+[% IF error == "vcs_duplicate_commit" %]
+  [% title = "Duplicate Commit" %]
+  You have already associated Commit [% commit.revision FILTER html %]
+  with [% terms.bug %] #[% bug.id FILTER html %].
+  
+[% ELSIF error == "vcs_revision_error" %]
   An error occurred while attempting to fetch commit [% id FILTER html %]
   from the "[% project FILTER html %]" project in the
   "[% repo FILTER html %]" repository. Sometimes this means that
