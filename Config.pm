@@ -27,9 +27,8 @@ use constant REQUIRED_MODULES => [
     {
         package => 'VCI',
         module  => 'VCI',
-        # 0.6.1 is the first stable version to have "revno" and
-        # "missing_requirements".
-        version => '0.7.0',
+        # 0.7.1 adds the "uuid" accessor for Commits.
+        version => '0.7.1',
     },
 ];
 

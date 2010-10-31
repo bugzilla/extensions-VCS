@@ -27,7 +27,7 @@ use Bugzilla::Bug;
 use Bugzilla::Install::Util qw(install_string);
 use Bugzilla::Util;
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 BEGIN{ *Bugzilla::Bug::vcs_commits = \&_bug_vcs_commits; }
 

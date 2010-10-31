@@ -1,3 +1,10 @@
+0.2 Oct 31, 2010
+    - The extension wasn't working on 3.6 due to an error about
+      REQUIRED_CREATE_FIELDS.
+    - The extension now understands that identical commits on different
+      branches are the same commit, at least for the distributed VCSes
+      like Bzr, Git, and Hg.
+
 0.1 Aug 28, 2010
     - First release.
     - Shows Commit info on show_bug.cgi.
