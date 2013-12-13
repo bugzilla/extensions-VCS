@@ -50,6 +50,23 @@ use constant get_param_list => (
     default => ON_WINDOWS ? "C/Windows/System32;C:/Windows"
                : '/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin',
   },
+  {
+    name => 'vcs_commit_header_format',
+    type => 't',
+    default => '<a class="vcs_commit_link" href="%vcsweb%">Revision %revno%</a> by %author% at <strong>%elapsed%</strong> (<span class="vcs_commit_time">%time%</span>)',
+  },
+  {
+    name => 'vcs_commit_sort_order',
+    type => 's',
+    choices => ['Latest last', 'Latest first'],
+    default => 'Latest last',
+  },
+  {
+    name => 'vcs_commit_diplay_option',
+    type => 's',
+    choices => ['Close all', 'Open all', 'Open only latest'],
+    default => 'Close all',
+  },
 );
 
 sub _check_vcs_repos {
@@ -124,6 +141,40 @@ sub _check_vcs_web {
         }
     }
     
+    return "";
+}
+
+sub _check_vcs_commit_header {
+    my ($value) = @_;
+
+    my @db_columns = Bugzilla::Extension::VCS::Commit->DB_COLUMNS;
+    foreach my $line (split "\n", $value) {
+        $line = trim($line);
+        next if !$line;
+        my (undef, $url) = split(/\s+/, $line, 2);
+        if (!$url) {
+            return "You must specify both a repository and a URL on this line: $line";
+        }
+        my @match_fields = ($url =~ /\%(.+?)\%/g);
+        foreach my $field (@match_fields) {
+            if (!grep { $field eq $_ } @db_columns) {
+                return install_string('vcs_commit_header_invalid', { field => $field });
+            }
+        }
+    }
+    
+    return "";
+}
+
+sub _check_vcs_commit_sort_order {
+    my ($value) = @_;
+
+    return "";
+}
+
+sub _check_vcs_commit_diplay_option {
+    my ($value) = @_;
+
     return "";
 }
 

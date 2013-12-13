@@ -30,27 +30,34 @@
 </script>
 
 <ul class="vcs_commits_list">
-  [% FOREACH commit = bug.vcs_commits %]
-    <li onclick="toggleCommitDetails([% commit.id FILTER js %])"
-        
-        id="vcs_commit_row_[% commit.id FILTER html %]"
-        class="vcs_commit_row">[% PROCESS format_commit %]</li>
+  [% IF bug.vcs_sortorder == 1 %]
+    [% FOREACH commit = bug.vcs_commits.reverse %]
+      [% PROCESS format_commit_li %]
+    [% END %]
+  [% ELSE %]
+    [% FOREACH commit = bug.vcs_commits %]
+      [% PROCESS format_commit_li %]
+    [% END %]
   [% END %]
 </ul>
 
+[% BLOCK format_commit_li %]
+  <li onclick="toggleCommitDetails([% commit.id FILTER js %])"
+      id="vcs_commit_row_[% commit.id FILTER html %]"
+      class="vcs_commit_row">[% PROCESS format_commit %]</li>
+[% END %]
+
 [% BLOCK format_commit %]
-  [% vcs_commit_link(commit) FILTER none %]
-  by
-  [%+ IF commit.author.match('@') AND user.id %]
-    <a href="mailto:[% commit.author FILTER uri %]">
+  [% vcs_commit_header(commit) FILTER none %]
+
+  [% IF (bug.vcs_displayoption == 1) || ((bug.vcs_displayoption == 2) && (bug.vcs_commits.last().id == commit.id)) %]
+      <div class="vcs_commit_details"
+           id="vcs_commit_[% commit.id FILTER html %]">
+  [% ELSE %]
+      <div class="vcs_commit_details bz_default_hidden"
+           id="vcs_commit_[% commit.id FILTER html %]">
   [% END %]
-  [% commit.author FILTER email FILTER html %]
-  [% '</a>' IF commit.author.match('@') AND user.id %]
-  at <span class="vcs_commit_time">[% commit.commit_time FILTER time %]</span>
-  
-  <div class="vcs_commit_details bz_default_hidden"
-       id="vcs_commit_[% commit.id FILTER html %]">
-    
+
     <p class="vcs_commit_repo">
       Checked in to
       <strong>[% commit.repo FILTER html %][% commit.project FILTER html %]</strong>
@@ -63,7 +70,7 @@
     <p class="vcs_commit_files_changed">
       [% IF commit.files.size == 1 %]
         <strong>[% commit.files.size FILTER html %]</strong> file changed:
-      [% ELSE %]
+      [% ELSIF commit.files.size != 0 %]
         <strong>[% commit.files.size FILTER html %]</strong> files changed:
       [% END %]
     </p>

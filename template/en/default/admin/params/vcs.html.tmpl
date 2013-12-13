@@ -78,7 +78,15 @@
     specified in this list.</p>
 [% END %]
 
+[% vcs_commit_header_format = BLOCK %]
+[% END %]
+
+[% vcs_commit_sort_order = BLOCK %]
+[% END %]
+
 [% param_descs = {
   "vcs_repos" => vcs_repos,
   "vcs_web"   => vcs_web,
+  "vcs_commit_header_format"   => vcs_commit_header_format,
+  "vcs_commit_sort_order"   => vcs_commit_sort_order,
 } %]

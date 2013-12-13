@@ -28,9 +28,18 @@ use Bugzilla::Bug;
 use Bugzilla::Install::Util qw(install_string);
 use Bugzilla::Util;
 
+use DateTime;
+use DateTime::TimeZone;
+use DateTime::Format::Strptime;
+
 our $VERSION = '0.2';
 
-BEGIN{ *Bugzilla::Bug::vcs_commits = \&_bug_vcs_commits; }
+BEGIN{ *Bugzilla::Bug::vcs_commits = \&_bug_vcs_commits;
+       *Bugzilla::Bug::vcs_sortorder = \&_bug_vcs_sortorder;
+       *Bugzilla::Bug::vcs_displayoption = \&_bug_vcs_displayoption;}
+
+# Cache timezone to increase performance
+my $TIMEZONE = DateTime::TimeZone->new( name => 'local' );
 
 # VCI uses Moose, and so takes a long time to load. When we don't need
 # VCI, we don't want it to load, under mod_cgi. However, under mod_perl,
@@ -201,6 +210,24 @@ sub _bug_vcs_commits {
     return $self->{vcs_commits};
 }
 
+sub _bug_vcs_sortorder {
+    my $order = Bugzilla->params->{'vcs_commit_sort_order'};
+    if ($order =~ /Latest last/) {
+        return 0;
+    }
+    return 1;
+}
+
+sub _bug_vcs_displayoption {
+    my $option = Bugzilla->params->{'vcs_commit_diplay_option'};
+    if ($option =~ /Close all/) {
+        return 0;
+    } elsif ($option =~ /Open all/) {
+        return 1;
+    }
+    return 2;
+}
+
 ##########
 # Config #
 ##########
@@ -224,10 +251,53 @@ sub template_before_create {
     my ($self, $args) = @_;
     my $variables = $args->{config}->{VARIABLES};
     $variables->{vcs_commit_link} = \&_create_commit_link;
+    $variables->{vcs_commit_header} = \&_create_commit_header;
     
     my $filters = $args->{config}->{FILTERS};
     my $html_filter = $filters->{html};
     $filters->{vcs_br} = \&_filter_br;
+}
+
+sub _create_commit_header {
+    my ($commit) = @_;
+
+    my $format = Bugzilla->params->{'vcs_commit_header_format'};
+
+    my $web_view = Bugzilla->params->{'vcs_web'};
+    my $web_url = '';
+    foreach my $line (split "\n", $web_view) {
+        $line = trim($line);
+        next if !$line;
+        my ($repo, $url) = split(/\s+/, $line, 2);
+        if (lc($repo) eq lc($commit->repo)) {
+            $web_url = $url;
+            last;
+        }
+    }
+
+    # We don't url_quote the replacements because they might be used
+    # in the URL path in an important way (like with %project%).
+    my @replace_fields = ($web_url =~ /\%(.+?)\%/g);
+    foreach my $field (@replace_fields) {
+        my $value = $commit->$field;
+        $web_url =~ s/\%\Q$field\E\%/$value/g;
+    }
+    $web_url = html_quote($web_url);
+
+    my $revno   = html_quote($commit->revno);
+    my $author  = html_quote($commit->author);
+    my $time    = html_quote($commit->time);
+
+    my $el = get_elapsed($commit->time);
+    my $elapsed = html_quote($el);
+
+    $format =~ s/\%revno\%/$revno/g;
+    $format =~ s/\%author\%/$author/g;
+    $format =~ s/\%time\%/$time/g;
+    $format =~ s/\%elapsed\%/$elapsed/g;
+    $format =~ s/\%vcsweb\%/$web_url/g;
+
+    return $format;
 }
 
 sub _create_commit_link {
@@ -293,6 +363,66 @@ sub _vcs_nonchanged {
             "vcs_commit",
             $args->{term}
         );
+}
+
+sub get_elapsed {
+    # $commit_time should be "2011-01-31 12:06:29"
+    my ($commit_time) = @_;
+
+    my $now = DateTime->now(time_zone => $TIMEZONE);
+
+    my $strp = DateTime::Format::Strptime->new(
+        pattern => '%Y-%m-%d %H:%M:%S'
+    );
+    my $commit_dt = $strp->parse_datetime($commit_time);
+
+    my $diff = $now->subtract_datetime($commit_dt);
+    my ($yearsago, $monthsago, $weeksago, $daysago, $hoursago, $minutesago, $secondsago) = 
+      $diff->in_units('years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds');
+
+    if ($yearsago > 1) {
+      return "$yearsago years ago";
+    } elsif ($yearsago == 1) {
+      return "$yearsago year ago";
+    }
+
+    if ($monthsago > 1) {
+      return "$monthsago months ago";
+    } elsif ($monthsago == 1) {
+      return "$monthsago month ago";
+    }
+
+    if ($weeksago > 1) {
+      return "$weeksago weeks ago";
+    } elsif ($weeksago == 1) {
+      return "$weeksago week ago";
+    }
+
+    if ($daysago > 1) {
+      return $daysago . " days ago";
+    } elsif ($daysago == 1) {
+      return $daysago . " day ago";
+    }
+
+    if ($hoursago > 1) {
+      return $hoursago . " hours ago";
+    } elsif ($hoursago == 1) {
+      return $hoursago . " hour ago";
+    }
+
+    if ($minutesago > 1) {
+      return $minutesago . " minutes ago";
+    } elsif ($minutesago == 1) {
+      return $minutesago . " minute ago";
+    }
+
+    if ($secondsago > 1) {
+      return $secondsago . " seconds ago";
+    } elsif ($secondsago == 1) {
+      return " Now ($commit_time)";
+    }
+
+    return $commit_time;
 }
 
 __PACKAGE__->NAME;
