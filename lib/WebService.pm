@@ -41,4 +41,15 @@ sub add_commit {
            };
 }
 
+sub delete_commit {
+    my ($self, $params) = @_;
+    
+    Bugzilla->login(LOGIN_REQUIRED);
+    
+    # Don't let people set the "id" field.
+    delete $params->{id};
+    my @deleted = Bugzilla::Extension::VCS::Commit->delete($params);
+    return @deleted;
+}
+
 1;

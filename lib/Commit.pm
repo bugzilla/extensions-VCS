@@ -68,6 +68,7 @@ use constant VALIDATOR_DEPENDENCIES => {
     project   => ['repo'],
 };
 
+use constant CLASS  => 'Bugzilla::Extension::VCS::Commit';
 use constant CF_CLASS => 'Bugzilla::Extension::VCS::CommitFile';
 
 # For Bugzilla 3.6 compatibility.
@@ -172,6 +173,29 @@ sub create {
     }
     
     return $object;
+}
+
+sub delete {
+    my ($self, $params) = @_;
+
+    my $commits = CLASS->match($params);
+    if(!@$commits) {
+          ThrowUserError('vcs_no_such_bug',
+                         { bug_id => $params->{bug_id}, 
+                           revision => $params->{revision} });
+    }
+
+    foreach my $commit (@$commits) {
+        my $files = CF_CLASS->match({ commit_id => $commit->id });
+        if(@$files) {
+            foreach my $file (@$files) {
+                $file->remove_from_db;
+            }
+        }
+        $commit->remove_from_db;
+    }
+
+    return $self;
 }
 
 # Creates a Commit from a VCI::Abstract::Commit

@@ -62,5 +62,9 @@
 [% ELSIF error == "vcs_type_invalid" %]
   '[% type FILTER html %]' is not a valid VCS type that this
   [%+ terms.Bugzilla %] currently supports. Error: [% err FILTER html %]
-
+  
+[% ELSIF error == "vcs_no_such_bug" %]
+  There is no bug with the revision "[% revision FILTER html %]" for
+  bug "[% bug_id FILTER html %]"
+  
 [% END %]

@@ -48,10 +48,9 @@ sub _error {
 # Main Script #
 ###############
 
-GetOptions(\%switch, 'help|h|?', 'config=s', 'repo=s', 'project=s',
+GetOptions(\%switch, 'help|h|?', 'delete', 'config=s', 'repo=s', 'project=s',
                      'bug=s', 'revision=s', 'login=s', 'pass=s', 'bugzilla=s')
     || die $@;
-my @required = qw(repo project bug revision login pass bugzilla);
 
 if (my $filename = $switch{'config'}) {
     open(my $fh, '<', $filename) or die "$filename: $!";
@@ -69,6 +68,14 @@ if (my $filename = $switch{'config'}) {
 # Print the help message if --help was set or if the required switches
 # weren't provided.
 pod2usage({-exitval => 1}) if (!keys %switch or $switch{'help'});
+
+my @required;
+if($switch{'delete'}) {
+    @required = qw(bug revision login pass bugzilla);
+} else {
+    @required = qw(repo project bug revision login pass bugzilla);
+}
+
 foreach my $item (@required) {
     if (!$switch{$item}) {
         die "You must specify a value for the '$item' switch.\n";
@@ -80,11 +87,20 @@ if ($switch{'bugzilla'} !~ m{/$}) {
 
 my $client = RPC::XML::Client->new($switch{'bugzilla'} . 'xmlrpc.cgi',
                                    combined_handler => \&_error);
-my $response = $client->simple_request('VCS.add_commit', {
-    Bugzilla_login => $switch{'login'}, Bugzilla_password => $switch{'pass'},
-    repo => $switch{'repo'}, project => $switch{'project'},
-    bug_id => $switch{'bug'}, revision => $switch{'revision'},
-});
+
+if($switch{'delete'}) {
+    my $response = $client->simple_request('VCS.delete_commit', {
+        Bugzilla_login => $switch{'login'}, Bugzilla_password => $switch{'pass'},
+        bug_id => $switch{'bug'}, revision => $switch{'revision'},
+    });
+} else {
+    my $response = $client->simple_request('VCS.add_commit', {
+        Bugzilla_login => $switch{'login'}, Bugzilla_password => $switch{'pass'},
+        repo => $switch{'repo'}, project => $switch{'project'},
+        bug_id => $switch{'bug'}, revision => $switch{'revision'},
+    });
+}
+
 
 __END__
 
@@ -112,6 +128,11 @@ contents of the file would look something like:
  bugzilla: https://bugzilla.mozilla.org/
 
 Each line replaces the value of a switch to this script.
+
+=item B<--delete>
+
+Delete the revision from the bug
+--project and --repo options are not required for this option.
 
 =item B<--bug=id>
 
