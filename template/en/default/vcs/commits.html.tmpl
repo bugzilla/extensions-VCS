@@ -57,7 +57,7 @@
     </p>
     
     <p class="vcs_commit_message">
-      [% commit.message FILTER quoteUrls(bug) FILTER vcs_br %]
+      [% commit.message FILTER vcs_br FILTER quoteUrls(bug) %]
     </p>
     
     <p class="vcs_commit_files_changed">

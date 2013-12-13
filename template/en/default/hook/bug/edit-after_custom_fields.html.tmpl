@@ -21,11 +21,7 @@
 [% RETURN UNLESS bug.vcs_commits.size %]
 
 <tr id="commits">
-  <th class="field_label commits_label">
-    <a href="#commits">[% field_descs.vcs_commits FILTER html %]:</a>
-  </th>
-  <td></td>
-</tr>
-<tr>
-  <td colspan="2">[% PROCESS "vcs/commits.html.tmpl" %]</td>
+  [% INCLUDE "bug/field-label.html.tmpl"
+    field = bug_fields.vcs_commits %]
+  <td>[% PROCESS "vcs/commits.html.tmpl" %]</td>
 </tr>
