@@ -18,6 +18,7 @@
 #
 # Contributor(s):
 #   Max Kanat-Alexander <mkanat@everythingsolved.com>
+#   Simon Green <sgreen@redhat.com>
 
 package Bugzilla::Extension::VCS;
 use strict;
@@ -264,6 +265,34 @@ sub _filter_br {
     $value =~ s/\s+$//sg;
     $value =~ s/\n/<br>/sg;
     return $value;
+}
+
+##########
+# Search #
+##########
+
+sub search_operator_field_override {
+    my ($self, $args) = @_;
+
+    my $operators = $args->{'operators'};
+
+    $operators->{vcs_commits} = {
+       _non_changed => sub { _vcs_nonchanged(@_) }
+    };
+}
+
+sub _vcs_nonchanged {
+    my ($invocant, $args) = @_;
+
+    $args->{full_field} = "vcs_commit.message";
+    $invocant->_do_operator_function($args);
+    $args->{term} =
+        Bugzilla::Search::build_subselect(
+            "bugs.bug_id",
+            "vcs_commit.bug_id",
+            "vcs_commit",
+            $args->{term}
+        );
 }
 
 __PACKAGE__->NAME;
